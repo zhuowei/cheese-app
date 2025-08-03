@@ -15,6 +15,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
 import com.worthdoingbadly.cheese.ui.theme.CheeseTheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.launch
@@ -24,9 +25,12 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.util.concurrent.atomic.AtomicBoolean
 
 // https://stackoverflow.com/a/78930945
 private fun InputStream.toLineFlow() = bufferedReader(StandardCharsets.UTF_8).lineSequence().asFlow().onCompletion {close()}
+
+private val phyaddrsToUse = listOf("0xfebeb000", "0xd0b3b000", "0xbe690000", "0xd5cf0000")
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -62,27 +66,26 @@ class MainActivity : ComponentActivity() {
             }
             val executablePath = applicationInfo.nativeLibraryDir + "/libcheese.so"
             val launchShPath = File(extractedDir, "launch.sh").path
-            val process = Runtime.getRuntime().exec(arrayOf(executablePath, "sh", launchShPath))
+            for (phyaddr in phyaddrsToUse) {
+                val processBuilder = ProcessBuilder().command(executablePath, "sh", launchShPath)
+                    .redirectErrorStream(true)
+                processBuilder.environment().set("CHEESE_PHYADDR", phyaddr)
+                val process = processBuilder.start()
 
-            launch {
-                process.inputStream.toLineFlow()
-                    .collect { line ->
-                        launch(Dispatchers.Main) {
+                launch {
+                    process.inputStream.toLineFlow()
+                        .collect { line ->
                             println(line)
-                        }
-                    }
-            }
-            launch {
-                process.errorStream.toLineFlow()
-                    .collect { line ->
-                        launch(Dispatchers.Main) {
-                            println(line)
+                            launch(Dispatchers.Main) {
+                                // TODO(zhuowei)
+                            }
                         }
                 }
+                // todo dump output
+                val returnVal = process.waitFor()
+                println("cheese returned $returnVal")
+                delay(1000)
             }
-            // todo dump output
-            val returnVal = process.waitFor()
-            println("cheese returned $returnVal")
         }
     }
 }

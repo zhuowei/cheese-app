@@ -36,7 +36,8 @@ if [ ! -f /system/build.prop ]; then
   exit 1
 fi
 
-# cheese: this is done already
+# cheese: different directory
+cd "$(dirname "$0")"
 #cd /data/local/tmp
 #chmod 755 busybox
 
@@ -82,7 +83,8 @@ if [ -d /debug_ramdisk ]; then
 fi
 
 # Make sure boot completed props are not set to 1
-setprop sys.boot_completed 0
+# cheese: and here...
+runcon u:r:init:s0 setprop sys.boot_completed 0
 
 # Mount /cache if not already mounted
 if ! grep -q ' /cache ' /proc/mounts; then
