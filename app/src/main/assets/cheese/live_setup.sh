@@ -36,6 +36,10 @@ if [ ! -f /system/build.prop ]; then
   exit 1
 fi
 
+# cheese: attempt to protect boot
+mount -o bind /dev/null /dev/block/by-name/boot_a
+mount -o bind /dev/null /dev/block/by-name/boot_b
+
 # cheese: different directory
 cd "$(dirname "$0")"
 #cd /data/local/tmp
@@ -53,7 +57,12 @@ if [ -z "$FIRST_STAGE" ]; then
   fi
 fi
 
-pm install -r -g $(pwd)/magisk.apk
+# cheese: don't re-install magisk if already installed.
+if pm path com.topjohnwu.magisk; then
+  echo "not re-installing magisk..."
+else
+  pm install -r -g $(pwd)/magisk.apk
+fi
 
 # Extract files from APK
 unzip -oj magisk.apk 'assets/util_functions.sh' 'assets/stub.apk'

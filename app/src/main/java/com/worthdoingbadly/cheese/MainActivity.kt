@@ -1,11 +1,14 @@
 package com.worthdoingbadly.cheese
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -14,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -22,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
@@ -42,8 +47,30 @@ import java.util.concurrent.atomic.AtomicBoolean
 // https://stackoverflow.com/a/78930945
 private fun InputStream.toLineFlow() = bufferedReader(StandardCharsets.UTF_8).lineSequence().asFlow().onCompletion {close()}
 
+private const val CHEESE_INITIAL_MESSAGE = """
+Cheese v2025-08-10
+Press Go to temp root with Magisk.
+Your device will restart.
+
+Warning:
+This disables all security on your device.
+When temp rooted, do NOT run any apps or browse any websites you don't trust.
+Do NOT flash to the boot partition: Magisk's Direct Install won't work.
+
+CVE-2025-21479 temp root by Zhuowei and the developers at XRBreak and FreeXR.
+
+Contains code from:
+ - adrenaline by Project Zero
+ - adreno_user from m-y-mo
+ - Freedreno from Mesa
+ - shellcode from Longterm Security
+ 
+For more information, click Help.
+"""
+
 class MainActivity : ComponentActivity() {
-    private val consoleText = mutableStateOf("Cheese v1.0 - press Go.")
+    private val consoleText = mutableStateOf(CHEESE_INITIAL_MESSAGE)
+    private val scrollState = ScrollState(initial = 0)
     private val running = mutableStateOf(false)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,23 +79,29 @@ class MainActivity : ComponentActivity() {
             CheeseTheme {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Column(modifier = Modifier.padding(innerPadding)) {
-                        Text(consoleText.value, modifier = Modifier.verticalScroll(
-                            rememberScrollState()
-                        ).weight(1f))
-                        Row(modifier = Modifier.height(80.dp)
-                        ) {
+                        Text(consoleText.value, modifier = Modifier.verticalScroll(scrollState).weight(1f))
+                        Row(modifier = Modifier.height(80.dp)) {
                             Button(
                                 onClick = { runCheese() },
                                 enabled = !running.value,
+                                shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.weight(1f).fillMaxHeight()
                             ) {
                                 Text("Go!")
                             }
                             Button(
                                 onClick = { openHelp() },
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxHeight(),
+                                ) {
+                                Text("Help")
+                            }
+                            Button(
+                                onClick = { copyText() },
+                                shape = RoundedCornerShape(8.dp),
                                 modifier = Modifier.fillMaxHeight()
                             ) {
-                                Text("Help")
+                                Text("Copy")
                             }
                         }
                     }
@@ -77,7 +110,7 @@ class MainActivity : ComponentActivity() {
         }
     }
     private fun runCheese() {
-        consoleText.value = ""
+        consoleText.value = "Starting...\n"
         running.value = true
         lifecycleScope.launch(Dispatchers.IO) {
             println("im in")
@@ -104,6 +137,7 @@ class MainActivity : ComponentActivity() {
                         println(line)
                         launch(Dispatchers.Main) {
                             consoleText.value += line + "\n"
+                            scrollState.scrollTo(100000)
                         }
                     }
             }
@@ -112,12 +146,21 @@ class MainActivity : ComponentActivity() {
             println("cheese returned $returnVal")
             launch(Dispatchers.Main) {
                 consoleText.value += "cheese returned $returnVal" + "\n"
+                scrollState.scrollTo(100000)
                 running.value = false
             }
         }
     }
     private fun openHelp() {
-        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/zhuowei/cheese")))
+        val intent = packageManager.getLaunchIntentForPackage("com.oculus.vrshell")!!
+        intent.putExtra("intent_data", "systemux://browser");
+        intent.putExtra("uri", Uri.parse("https://github.com/zhuowei/cheese"))
+        startActivity(intent)
+    }
+    private fun copyText() {
+        val clipboardManager = getSystemService(CLIPBOARD_SERVICE) as ClipboardManager
+        // When setting the clipboard text.
+        clipboardManager.setPrimaryClip(ClipData.newPlainText   ("", consoleText.value))
     }
 }
 
