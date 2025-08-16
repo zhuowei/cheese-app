@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Intent
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -48,14 +49,16 @@ import java.util.concurrent.atomic.AtomicBoolean
 private fun InputStream.toLineFlow() = bufferedReader(StandardCharsets.UTF_8).lineSequence().asFlow().onCompletion {close()}
 
 private const val CHEESE_INITIAL_MESSAGE = """
-Cheese v2025-08-10
+Cheese v2025-08-16
 Press Go to temp root with Magisk.
 Your device will restart.
 
 Warning:
 This disables all security on your device.
 When temp rooted, do NOT run any apps or browse any websites you don't trust.
-Do NOT flash to the boot partition: Magisk's Direct Install won't work.
+Do NOT write to the boot or system partition. You will brick.
+Do NOT use Magisk's Direct Install.
+You may want to back up your deviceKey, Meta Access Token and Oculus Access Token after root: you can find a link to FreeXR's guide in Help.
 
 CVE-2025-21479 temp root by Zhuowei and the developers at XRBreak and FreeXR.
 
@@ -64,7 +67,16 @@ Contains code from:
  - adreno_user from m-y-mo
  - Freedreno from Mesa
  - shellcode from Longterm Security
+ - Magisk from topjohnwu and the Magisk developers.
  
+For more information, click Help.
+"""
+
+private const val PATCHED_MESSAGE = """
+Unfortunately, your device has been patched:
+You're running version VERSION_CURRENT.
+The last vulnerable version is VERSION_LAST.
+
 For more information, click Help.
 """
 
@@ -74,6 +86,9 @@ class MainActivity : ComponentActivity() {
     private val running = mutableStateOf(false)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (isPatched()) {
+            consoleText.value = makePatchedMessage()
+        }
         enableEdgeToEdge()
         setContent {
             CheeseTheme {
@@ -109,6 +124,7 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
     private fun runCheese() {
         consoleText.value = "Starting...\n"
         running.value = true
@@ -162,8 +178,31 @@ class MainActivity : ComponentActivity() {
         // When setting the clipboard text.
         clipboardManager.setPrimaryClip(ClipData.newPlainText   ("", consoleText.value))
     }
+
+    private fun getFingerprint() = Build.FINGERPRINT
+
+    private fun isPatched(): Boolean {
+        val lastVersion = lastVersionForDevice()
+        if (lastVersion == 0L) {
+            return false // you're on your own
+        }
+        return fingerprintToBuildVersion(getFingerprint()) > lastVersion
+    }
+
+    private fun makePatchedMessage(): String = PATCHED_MESSAGE
+        .replace("VERSION_CURRENT", formatBuildVersion(fingerprintToBuildVersion(getFingerprint())))
+        .replace("VERSION_LAST", formatBuildVersion(lastVersionForDevice()))
 }
 
+private fun lastVersionForDevice(): Long = when(Build.BOARD) {
+    "eureka" -> 51154110129000520L
+    "panther" -> 1176880099000610L
+    else -> 0
+}
+
+private fun fingerprintToBuildVersion(fingerprint: String) = fingerprint.split(":")[1].split("/")[2].toLong()
+
+private fun formatBuildVersion(version: Long) = "" + (version / 1_000000_0000L) + "." + ((version / 1_0000) % 1_000000) + "." + (version % 1_0000)
 @Composable
 fun Greeting(name: String, modifier: Modifier = Modifier) {
     Text(
