@@ -53,16 +53,20 @@ Cheese v2025-08-16
 Press Go to temp root with Magisk.
 Your device will restart.
 
-Warning:
-This disables all security on your device.
-When temp rooted, do NOT run any apps or browse any websites you don't trust.
-Do NOT write to the boot or system partition. You will brick.
-Do NOT use Magisk's Direct Install.
+Warning: Rooting is dangerous.
+If you brick a Quest 3/3S, there is no way to repair it.
+
+This disables all security when temp rooted.
+Do NOT run apps or browse websites you don't trust.
+
+Do NOT write to the boot or system partition. You will BRICK.
+Do NOT use Magisk's "Install" feature.
+
 You may want to back up your deviceKey, Meta Access Token and Oculus Access Token after root.
+
 For more information, click Help.
 
 CVE-2025-21479 temp root by Zhuowei and the developers at XRBreak and FreeXR.
-
 Contains code from:
  - adrenaline by Project Zero
  - adreno_user from m-y-mo
