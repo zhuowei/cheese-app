@@ -37,8 +37,10 @@ if [ ! -f /system/build.prop ]; then
 fi
 
 # cheese: attempt to protect boot
-mount -o bind /dev/null /dev/block/by-name/boot_a
-mount -o bind /dev/null /dev/block/by-name/boot_b
+mv /dev/block/by-name/boot_a /dev/block/by-name/DO_NOT_FLASH_boot_a
+mv /dev/block/by-name/boot_b /dev/block/by-name/DO_NOT_FLASH_boot_b
+ln -s /dev/does/not/exist_a /dev/block/by-name/boot_a
+ln -s /dev/does/not/exist_b /dev/block/by-name/boot_b
 
 # cheese: different directory
 cd "$(dirname "$0")"
