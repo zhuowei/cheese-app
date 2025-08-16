@@ -58,7 +58,8 @@ This disables all security on your device.
 When temp rooted, do NOT run any apps or browse any websites you don't trust.
 Do NOT write to the boot or system partition. You will brick.
 Do NOT use Magisk's Direct Install.
-You may want to back up your deviceKey, Meta Access Token and Oculus Access Token after root: you can find a link to FreeXR's guide in Help.
+You may want to back up your deviceKey, Meta Access Token and Oculus Access Token after root.
+For more information, click Help.
 
 CVE-2025-21479 temp root by Zhuowei and the developers at XRBreak and FreeXR.
 
@@ -133,8 +134,12 @@ class MainActivity : ComponentActivity() {
             val assetManager = assets
             val extractedDir = getDir("cheese", 0)
             for (filename in assetManager.list("cheese")!!) {
+                val targetFile = File(extractedDir, filename)
+                if (targetFile.exists()) {
+                    // TODO(zhuowei): on new version, overwrite directory...
+                    continue
+                }
                 assetManager.open("cheese/" + filename).use {
-                    val targetFile = File(extractedDir, filename)
                     Files.copy(it, targetFile.toPath(),
                         StandardCopyOption.REPLACE_EXISTING
                     );
@@ -179,18 +184,18 @@ class MainActivity : ComponentActivity() {
         clipboardManager.setPrimaryClip(ClipData.newPlainText   ("", consoleText.value))
     }
 
-    private fun getFingerprint() = Build.FINGERPRINT
+    private fun getVersionIncremental() = Build.VERSION.INCREMENTAL.toLong()
 
     private fun isPatched(): Boolean {
         val lastVersion = lastVersionForDevice()
         if (lastVersion == 0L) {
             return false // you're on your own
         }
-        return fingerprintToBuildVersion(getFingerprint()) > lastVersion
+        return getVersionIncremental() > lastVersion
     }
 
     private fun makePatchedMessage(): String = PATCHED_MESSAGE
-        .replace("VERSION_CURRENT", formatBuildVersion(fingerprintToBuildVersion(getFingerprint())))
+        .replace("VERSION_CURRENT", formatBuildVersion(getVersionIncremental()))
         .replace("VERSION_LAST", formatBuildVersion(lastVersionForDevice()))
 }
 
@@ -199,8 +204,6 @@ private fun lastVersionForDevice(): Long = when(Build.BOARD) {
     "panther" -> 1176880099000610L
     else -> 0
 }
-
-private fun fingerprintToBuildVersion(fingerprint: String) = fingerprint.split(":")[1].split("/")[2].toLong()
 
 private fun formatBuildVersion(version: Long) = "" + (version / 1_000000_0000L) + "." + ((version / 1_0000) % 1_000000) + "." + (version % 1_0000)
 @Composable
